@@ -1,5 +1,6 @@
 export const checkUser = (payload: UserState) => {
   try {
+    //MOCK USER AUTH API
     if (
       payload.userName === payload.mockUserName &&
       payload.password === payload.mockPassword
@@ -8,7 +9,6 @@ export const checkUser = (payload: UserState) => {
     }
     return false;
   } catch (error) {
-    console.log('checkUser error', error);
-    return false;
+    throw new Error('User Auth Error');
   }
 };
