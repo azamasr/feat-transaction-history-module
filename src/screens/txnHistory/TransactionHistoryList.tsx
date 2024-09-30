@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React from 'react';
 import {
   Image,
@@ -9,47 +10,62 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useQuery} from 'react-query';
+import {useNavigation} from '@react-navigation/native';
 import {RefreshControl, ScrollView} from 'react-native-gesture-handler';
 import * as Progress from 'react-native-progress';
 
 import arrowDown from '../../assets/icon/arrowDown.png';
 import arrowUp from '../../assets/icon/arrowUp.png';
 import filter from '../../assets/icon/filterIcon.png';
+import logOut from '../../assets/icon/logOutIcon.png';
+import NoData from '../../assets/image/not_found_illustration.jpg';
 
 import MonthList from '../../components/MonthList';
 import {getTransactionList} from '../../service/transactionsService';
 import {mapTransactionHistoryToList} from '../../utility/historyMapper';
 import {months} from '../../utility/months';
+import {LOGIN_PAGE} from '../../routes/route';
 
 const TransactionHistoryList = () => {
+  const navigation = useNavigation();
   const [selectedMonth, setSelectedMonth] = React.useState(0);
   const [transactionList, setTransactionList] = React.useState<any>([]);
 
   const [isFilterVisible, setIsFilterVisible] = React.useState(false);
-  const [payload, setPayload] = React.useState('all');
+  const [isFetchDone, setIsFetchDone] = React.useState(false);
+  const [payload, setPayload] = React.useState(0);
 
-  const {refetch, isLoading} = useQuery(
+  const {refetch} = useQuery(
     'getTransactionList',
     () => getTransactionList(payload),
     {
-      enabled: true,
+      enabled: !isFetchDone,
       onSuccess: data => {
+        setIsFetchDone(true);
         setTransactionList(data);
       },
-      onError: error => {
-        console.log('error', error);
+      onError: () => {
+        setIsFetchDone(true);
       },
     },
   );
 
   React.useEffect(() => {
-    setPayload(
-      selectedMonth === 1
-        ? 'all'
-        : months.find(month => month.value === selectedMonth)?.label ?? 'all',
-    );
     refetch();
-  }, [payload, selectedMonth, refetch]);
+    setIsFetchDone(false);
+  }, [payload]);
+
+  const updatePayload = React.useCallback(() => {
+    setPayload(
+      selectedMonth === 0
+        ? 0
+        : months.find(month => month.value === selectedMonth)?.value ?? 0,
+    );
+  }, [selectedMonth, refetch]);
+
+  React.useEffect(() => {
+    updatePayload();
+  }, [selectedMonth]);
 
   const mappedHistory = React.useMemo(
     () => mapTransactionHistoryToList(transactionList || []),
@@ -95,17 +111,48 @@ const TransactionHistoryList = () => {
     );
   };
 
+  if (!isFetchDone) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>Transaction History</Text>
+        </View>
+        <View style={styles.progress}>
+          <Progress.Circle
+            color="#ff735c"
+            size={40}
+            borderWidth={20}
+            indeterminate={true}
+            style={styles.progress}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+          <RefreshControl
+            refreshing={!isFetchDone}
+            onRefresh={() => setIsFetchDone(false)}
+          />
         }>
         <View style={styles.headerContainer}>
+          <TouchableOpacity
+            onPress={() => {
+              navigation.navigate(LOGIN_PAGE);
+            }}>
+            <Image source={logOut} style={styles.headerIcon} />
+          </TouchableOpacity>
           <Text style={styles.title}>Transaction History</Text>
           <TouchableOpacity
-            onPress={() => setIsFilterVisible(!isFilterVisible)}>
-            <Image source={filter} style={styles.filterIcon} />
+            onPress={() => {
+              setIsFilterVisible(!isFilterVisible);
+              setSelectedMonth(0);
+            }}>
+            <Image source={filter} style={styles.headerIcon} />
           </TouchableOpacity>
         </View>
 
@@ -120,16 +167,13 @@ const TransactionHistoryList = () => {
             sections={mappedHistory}
             renderItem={renderRecordList}
             renderSectionHeader={renderSectionHeader}
-            keyExtractor={(item, index) => String(index).valueOf()}
+            keyExtractor={(item, index) => index.toString()}
           />
         ) : (
-          <Progress.Circle
-            color="#ff735c"
-            size={40}
-            borderWidth={30}
-            indeterminate={true}
-            style={styles.progress}
-          />
+          <>
+            <Image source={NoData} style={styles.noDataImage} />
+            <Text style={styles.noDataText}>No transactions available</Text>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -162,10 +206,9 @@ const styles = StyleSheet.create({
     width: 10,
     height: 12,
   },
-  filterIcon: {
+  headerIcon: {
     width: 20,
     height: 20,
-    alignSelf: 'flex-end',
   },
   credit: {
     backgroundColor: '#d3f5e9',
@@ -222,6 +265,18 @@ const styles = StyleSheet.create({
   detailsText2: {
     fontSize: 12,
     color: '#686E73',
+  },
+  noDataImage: {
+    width: 200,
+    height: 200,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  noDataText: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: '#395963',
+    textAlign: 'center',
   },
 });
 

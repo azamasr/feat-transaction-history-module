@@ -1,21 +1,37 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {Image, StyleSheet, View, Text} from 'react-native';
 import {Controller, useForm} from 'react-hook-form';
 import {useNavigation} from '@react-navigation/native';
+import {TouchableOpacity} from 'react-native-gesture-handler';
+
 import * as yup from 'yup';
 import {yupResolver} from '@hookform/resolvers/yup';
 
 import LoginIllustration from '../../assets/image/login_illustration.jpg';
+import BiometricIcon from '../../assets/icon/biometricIcon.png';
 import TextInput from '../../components/TextInput';
 import Button from '../../components/Button';
 import {TRANSACTION_HISTORY_LIST} from '../../routes/route';
 import {checkUser} from '../../service/userService';
 import {userStore} from '../../store';
+import {
+  initiateBiometricLogin,
+  initiateBiometricSetup,
+  isBiometricSensorAvailable,
+} from '../../utility/biometrics';
 
 const LoginPage = () => {
   const navigation = useNavigation();
   const {userName, password} = userStore(state => state.user);
   const [invalidCredentials, setInvalidCredentials] = React.useState(false);
+
+  const [isBiometricAvailable, setIsBiometricAvailable] = React.useState(false);
+  const [isBiometricSetup, setIsBiometricSetup] = React.useState(false);
+  useEffect(() => {
+    isBiometricSensorAvailable().then(response => {
+      setIsBiometricAvailable(response.hasBiometric);
+    });
+  }, []);
 
   const schema = yup.object({
     userName: yup.string().required('User Name cannot be blank'),
@@ -24,6 +40,7 @@ const LoginPage = () => {
 
   const {
     control,
+    watch,
     handleSubmit,
     formState: {errors},
   } = useForm({
@@ -35,6 +52,8 @@ const LoginPage = () => {
     mode: 'onChange',
   });
 
+  const watchAllFields = watch();
+
   const onSubmit = (data: any) => {
     const payload = {
       ...data,
@@ -45,6 +64,28 @@ const LoginPage = () => {
       navigation.navigate(TRANSACTION_HISTORY_LIST);
     } else {
       setInvalidCredentials(true);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      const response = await initiateBiometricLogin();
+      if (response.success) {
+        navigation.navigate(TRANSACTION_HISTORY_LIST);
+      }
+    } catch (error) {
+      throw new Error('Biometric Authentication Failed');
+    }
+  };
+
+  const handleBiometricSetup = async () => {
+    try {
+      const response = await initiateBiometricSetup();
+      if (response.success) {
+        setIsBiometricSetup(true);
+      }
+    } catch (error) {
+      throw new Error('Biometric Authentication Failed');
     }
   };
 
@@ -92,7 +133,30 @@ const LoginPage = () => {
         )}
       </View>
 
-      <Button buttonLabel="Login" onPress={handleSubmit(onSubmit)} />
+      <Button
+        disabled={
+          (errors && Object.keys(errors)?.length > 0) ||
+          Object.values(watchAllFields).some(value => value === '')
+        }
+        buttonLabel="Login"
+        onPress={handleSubmit(onSubmit)}
+      />
+      {isBiometricAvailable && isBiometricSetup ? (
+        <TouchableOpacity
+          onPress={handleBiometricLogin}
+          style={styles.biometricContainer}>
+          <Text style={styles.biometricLoginText}>Login with Biometric</Text>
+          <Image source={BiometricIcon} style={styles.biometricIcon} />
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          onPress={handleBiometricSetup}
+          style={styles.biometricContainer}>
+          <Text style={styles.biometricLoginText}>Setup Biometric</Text>
+          <Text style={styles.biometricLoginText}>to login with Biometric</Text>
+          <Image source={BiometricIcon} style={styles.biometricIcon} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -122,6 +186,21 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     padding: 10,
+  },
+  biometricContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 10,
+  },
+  biometricLoginText: {
+    fontSize: 12,
+    color: '#688691',
+    paddingRight: 5,
+  },
+  biometricIcon: {
+    width: 20,
+    height: 20,
   },
 });
 
