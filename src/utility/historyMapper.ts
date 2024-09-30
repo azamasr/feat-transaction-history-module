@@ -7,7 +7,7 @@ export const mapTransactionHistoryToList = (
   data?: any,
 ): SectionListData<any, Record<string, any>>[] => {
   const groupedData = groupBy(data, val => {
-    return dayjs('DD MMM, YYYY', val.date);
+    return dayjs(val.date).format('MMMM');
   });
   const mappedData = Object.keys(groupedData).map(val => ({
     title: val,

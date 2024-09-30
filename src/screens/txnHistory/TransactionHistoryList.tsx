@@ -1,22 +1,32 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import React from 'react';
-import {Image, SectionList, StyleSheet, Text, View} from 'react-native';
+import {
+  Image,
+  SectionList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useQuery} from 'react-query';
 import {RefreshControl, ScrollView} from 'react-native-gesture-handler';
+import * as Progress from 'react-native-progress';
 
 import arrowDown from '../../assets/icon/arrowDown.png';
 import arrowUp from '../../assets/icon/arrowUp.png';
+import filter from '../../assets/icon/filterIcon.png';
 
 import MonthList from '../../components/MonthList';
 import {getTransactionList} from '../../service/transactionsService';
 import {mapTransactionHistoryToList} from '../../utility/historyMapper';
+import {months} from '../../utility/months';
 
 const TransactionHistoryList = () => {
-  const [selectedMonth, setSelectedMonth] = React.useState(1);
+  const [selectedMonth, setSelectedMonth] = React.useState(0);
   const [transactionList, setTransactionList] = React.useState<any>([]);
 
-  const [payload] = React.useState('all');
+  const [isFilterVisible, setIsFilterVisible] = React.useState(false);
+  const [payload, setPayload] = React.useState('all');
 
   const {refetch, isLoading} = useQuery(
     'getTransactionList',
@@ -33,8 +43,13 @@ const TransactionHistoryList = () => {
   );
 
   React.useEffect(() => {
+    setPayload(
+      selectedMonth === 1
+        ? 'all'
+        : months.find(month => month.value === selectedMonth)?.label ?? 'all',
+    );
     refetch();
-  }, [payload]);
+  }, [payload, selectedMonth, refetch]);
 
   const mappedHistory = React.useMemo(
     () => mapTransactionHistoryToList(transactionList || []),
@@ -43,50 +58,78 @@ const TransactionHistoryList = () => {
 
   const renderRecordList = ({item}: any) => (
     <View style={styles.transactionDetailContainer}>
-      <Image
-        source={item.type === 'credit' ? arrowUp : arrowDown}
-        style={styles.arrow}
-      />
-      <View>
-        <Text>{item.description}</Text>
-        <Text>{item.time}</Text>
+      <View style={styles.leftRowContainer}>
+        <View
+          style={[
+            styles.arrowContainer,
+            item.type === 'Credit' ? styles.credit : styles.debit,
+          ]}>
+          <Image
+            source={item.type === 'Credit' ? arrowUp : arrowDown}
+            style={styles.arrow}
+          />
+        </View>
+        <View>
+          <Text style={styles.detailsText}>{item.description}</Text>
+          <Text style={styles.detailsText2}>{item.time}</Text>
+        </View>
       </View>
-      <View>
-        <Text>{item.amount}</Text>
-        <Text>{item.type}</Text>
+      <View style={styles.rightRowContainer}>
+        <Text
+          style={[
+            styles.detailsText,
+            item.type === 'Credit' ? styles.amountCredit : styles.amountDebit,
+          ]}>
+          RM{item.amount}
+        </Text>
+        <Text style={styles.detailsText2}>{item.type}</Text>
       </View>
     </View>
   );
 
-  const renderSectionHeader = ({section}: any) => (
-    <View style={styles.sectionHeaderContainer}>
-      <Text style={styles.sectionHeaderText}>{section.title}</Text>
-    </View>
-  );
+  const renderSectionHeader = ({section}: any) => {
+    return (
+      <View style={styles.sectionHeaderContainer}>
+        <Text style={styles.sectionHeaderText}>{section.title}</Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+        }>
         <View style={styles.headerContainer}>
           <Text style={styles.title}>Transaction History</Text>
+          <TouchableOpacity
+            onPress={() => setIsFilterVisible(!isFilterVisible)}>
+            <Image source={filter} style={styles.filterIcon} />
+          </TouchableOpacity>
         </View>
 
-        <MonthList month={selectedMonth} setMonth={setSelectedMonth} />
+        {isFilterVisible && (
+          <View style={styles.monthListContainer}>
+            <MonthList month={selectedMonth} setMonth={setSelectedMonth} />
+          </View>
+        )}
 
-        {transactionList.length > 0 ? (
+        {transactionList?.length > 0 ? (
           <SectionList
-            refreshControl={
-              <RefreshControl refreshing={isLoading} onRefresh={refetch} />
-            }
-            // ListEmptyComponent={renderEmptyRecord}
-            // ItemSeparatorComponent={ItemSeparatorComponent}
             sections={mappedHistory}
             renderItem={renderRecordList}
             renderSectionHeader={renderSectionHeader}
             keyExtractor={(item, index) => String(index).valueOf()}
           />
         ) : (
-          <></>
+          <Progress.Circle
+            color="#ff735c"
+            size={40}
+            borderWidth={30}
+            indeterminate={true}
+            style={styles.progress}
+          />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -97,12 +140,42 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
   },
+  progress: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 30,
+  },
+  monthListContainer: {
+    paddingBottom: 10,
+  },
+  arrowContainer: {
+    borderRadius: 30,
+    padding: 10,
+    marginRight: 10,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignContent: 'center',
+  },
   arrow: {
+    width: 10,
+    height: 12,
+  },
+  filterIcon: {
     width: 20,
     height: 20,
+    alignSelf: 'flex-end',
+  },
+  credit: {
+    backgroundColor: '#d3f5e9',
+  },
+  debit: {
+    backgroundColor: '#f8e8eb',
   },
   headerContainer: {
-    justifyContent: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
   },
@@ -110,10 +183,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '500',
     color: '#395963',
+    flex: 1,
+    textAlign: 'center',
   },
   transactionDetailContainer: {
-    padding: 10,
+    marginHorizontal: 15,
+    marginVertical: 15,
     flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  leftRowContainer: {
+    width: '80%',
+    flexDirection: 'row',
+  },
+  rightRowContainer: {
+    justifyContent: 'flex-end',
+    width: '20%',
   },
   dividerContainer: {flex: 1, paddingHorizontal: 18},
   sectionHeaderContainer: {
@@ -122,7 +207,21 @@ const styles = StyleSheet.create({
   },
   sectionHeaderText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 14,
+  },
+  detailsText: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  amountCredit: {
+    color: '#00B761',
+  },
+  amountDebit: {
+    color: '#FF5F5F',
+  },
+  detailsText2: {
+    fontSize: 12,
+    color: '#686E73',
   },
 });
 

@@ -15,8 +15,6 @@ const MonthList: React.FC<MonthProps> = ({month, setMonth}) => {
   const flatListRef = useRef<FlatList>(null);
   const [monthOffSet, setMonthOffSet] = React.useState(0);
 
-  console.log('month', month);
-
   const handleMoveRight = () => {
     if (monthOffSet !== 1000) {
       setMonthOffSet(monthOffSet + 200);
@@ -106,7 +104,7 @@ const styles = StyleSheet.create({
     borderColor: '#ff735c',
   },
   monthText: {
-    fontSize: 10,
+    fontSize: 12,
   },
   selectedMonthText: {
     color: 'white',
