@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     height: 20,
   },
   selectedMonthContainer: {
-    backgroundColor: '#ff735c',
+    backgroundColor: '#ff4f5a',
   },
   monthContainer: {
     padding: 10,
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 50,
     borderWidth: 1,
-    borderColor: '#ff735c',
+    borderColor: '#ff4f5a',
   },
   monthText: {
     fontSize: 12,

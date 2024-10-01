@@ -24,7 +24,7 @@ import MonthList from '../../components/MonthList';
 import {getTransactionList} from '../../service/transactionsService';
 import {mapTransactionHistoryToList} from '../../utility/historyMapper';
 import {months} from '../../utility/months';
-import {LOGIN_PAGE} from '../../routes/route';
+import {LOGIN_PAGE, TRANSACTION_DETAILS} from '../../routes/route';
 
 const TransactionHistoryList = () => {
   const navigation = useNavigation();
@@ -73,7 +73,19 @@ const TransactionHistoryList = () => {
   );
 
   const renderRecordList = ({item}: any) => (
-    <View style={styles.transactionDetailContainer}>
+    <TouchableOpacity
+      onPress={() =>
+        navigation.navigate(TRANSACTION_DETAILS, {
+          data: { 
+            description: item.description,
+            amount: item.amount,
+            date: item.date,
+            type: item.type,
+            id: item.id,
+          },
+        })
+      }
+      style={styles.transactionDetailContainer}>
       <View style={styles.leftRowContainer}>
         <View
           style={[
@@ -100,7 +112,7 @@ const TransactionHistoryList = () => {
         </Text>
         <Text style={styles.detailsText2}>{item.type}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderSectionHeader = ({section}: any) => {
@@ -119,7 +131,7 @@ const TransactionHistoryList = () => {
         </View>
         <View style={styles.progress}>
           <Progress.Circle
-            color="#ff735c"
+            color="#ff4f5a"
             size={40}
             borderWidth={20}
             indeterminate={true}
@@ -246,7 +258,7 @@ const styles = StyleSheet.create({
   dividerContainer: {flex: 1, paddingHorizontal: 18},
   sectionHeaderContainer: {
     padding: 10,
-    backgroundColor: '#ff735c',
+    backgroundColor: '#ff4f5a',
   },
   sectionHeaderText: {
     color: 'white',
